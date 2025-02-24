@@ -16,7 +16,7 @@ jobs:
     - name: Setup PHP
       uses: shivammathur/setup-php@v2
       with:
-        php-version: '8.2'
+        php-version: '8.4'
         extensions: mbstring, xml, ctype, iconv, mysql, imagick
 
     - name: Cache Composer Packages
@@ -35,6 +35,13 @@ jobs:
       run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_ENV
       id: extract_branch
 
+    - name: Add repository to composer.json if in fork
+      if: github.repository_owner != 'devdojo'
+      run: |
+        jq '.repositories += [{"type": "vcs", "url": "https://github.com/${{github.repository}}"}]' composer.json > composer.json.tmp && mv composer.json.tmp composer.json
+      working-directory: ./laravel_app
+
+
     - name: Install DevDojo Auth from current branch
       run: "composer require devdojo/auth:dev-${{ env.branch }} --with-all-dependencies"
       working-directory: ./laravel_app
@@ -46,7 +53,7 @@ jobs:
     - name: Publish the DevDojo Configs
       run: php artisan vendor:publish --tag=auth:config
       working-directory: ./laravel_app
-    
+
     - name: Publish the DevDojo Auth Migrations
       run: php artisan vendor:publish --tag=auth:migrations
       working-directory: ./laravel_app
